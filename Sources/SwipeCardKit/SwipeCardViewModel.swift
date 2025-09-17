@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 
+@available(iOS 13.0, *)
 @MainActor
 public class SwipeCardViewModel: ObservableObject {
     private let currentUserID = "abc123"
