@@ -23,11 +23,16 @@ public class SwipeCardViewModel: ObservableObject {
     @Published public var users: [User] = []
     
     public init() {
-        // For demo,使用靜態資料
+        // 使用網路圖片的示例數據
         self.users = [
-            User(id: "userID_2", name: "後照鏡被偷", age: 20, zodiac: "雙魚座", location: "桃園市", height: 172, photos: ["userID_2_photo1", "userID_2_photo2"]),
-            User(id: "userID_3", name: "小明", age: 22, zodiac: "天秤座", location: "台北市", height: 180, photos: ["userID_3_photo1", "userID_3_photo2", "userID_3_photo3"]),
-            User(id: "userID_4", name: "小花", age: 25, zodiac: "獅子座", location: "新竹市", height: 165, photos: ["userID_4_photo1", "userID_4_photo2"])
+            User(id: "userID_2", name: "Emma", age: 20, zodiac: "雙魚座", location: "桃園市", height: 172,
+                 photos: ["https://images.examples.com/wp-content/uploads/2017/11/person1.jpg",
+                         "https://images.examples.com/wp-content/uploads/2017/11/person2.jpg"]),
+            User(id: "userID_3", name: "Alex", age: 22, zodiac: "天秤座", location: "台北市", height: 180,
+                 photos: ["https://images.examples.com/wp-content/uploads/2017/11/person3.jpg",
+                         "https://images.examples.com/wp-content/uploads/2017/11/person4.jpg"]),
+            User(id: "userID_4", name: "Sarah", age: 25, zodiac: "獅子座", location: "新竹市", height: 165,
+                 photos: ["https://images.examples.com/wp-content/uploads/2017/11/person5.jpg"])
         ]
     }
     

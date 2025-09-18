@@ -1,8 +1,8 @@
 //
-//  Color.swift
-//  SwipeCardUI
+//  Color+Extensions.swift
+//  SwipeCardKit
 //
-//  Created by 游哲維 on 2025/3/16.
+//  Created by 游哲維 on 2025/9/18.
 //
 
 import SwiftUI

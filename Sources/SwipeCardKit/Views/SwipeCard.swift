@@ -20,9 +20,7 @@ public struct SwipeCard: View {
         ZStack {
             if user.photos.indices.contains(currentPhotoIndex) {
                 if #available(iOS 17.0, *) {
-                    Image(user.photos[currentPhotoIndex])
-                        .resizable()
-                        .scaledToFill()
+                    photoImageView
                         .frame(maxWidth: UIScreen.main.bounds.width - 20, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 25))
                         .overlay(RoundedRectangle(cornerRadius: 25).stroke(Color.white, lineWidth: 4))
@@ -230,5 +228,98 @@ public struct SwipeCard: View {
             }
             .padding()
         }
+    }
+    
+    // MARK: - 圖片視圖
+    @ViewBuilder
+    private var photoImageView: some View {
+        let photoURL = user.photos[currentPhotoIndex]
+        
+        if #available(iOS 15.0, *) {
+            // iOS 15+ 使用系統的 AsyncImage
+            AsyncImage(url: URL(string: photoURL)) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                ZStack {
+                    Color.gray.opacity(0.3)
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                }
+            }
+        } else {
+            // iOS 13-14 降級處理
+            LegacyAsyncImageView(url: photoURL)
+        }
+    }
+}
+
+// MARK: - iOS 13-14 相容的圖片載入組件
+@available(iOS 13.0, *)
+struct LegacyAsyncImageView: View {
+    let url: String
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else if isLoading {
+                ZStack {
+                    Color.gray.opacity(0.3)
+                    if #available(iOS 14.0, *) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("載入中...")
+                            .foregroundColor(.white)
+                    }
+                }
+            } else {
+                ZStack {
+                    Color.gray.opacity(0.3)
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundColor(.white)
+                            .font(.system(size: 30))
+                        Text("載入失敗")
+                            .foregroundColor(.white)
+                            .font(.caption)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        // 如果是本地圖片，直接載入
+        if !url.hasPrefix("http") {
+            self.image = UIImage(named: url)
+            self.isLoading = false
+            return
+        }
+        
+        // 載入網路圖片
+        guard let imageURL = URL(string: url) else {
+            self.isLoading = false
+            return
+        }
+        
+        URLSession.shared.dataTask(with: imageURL) { data, response, error in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                if let data = data, let loadedImage = UIImage(data: data) {
+                    self.image = loadedImage
+                }
+            }
+        }.resume()
     }
 }
