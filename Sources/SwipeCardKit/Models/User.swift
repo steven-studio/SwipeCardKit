@@ -6,16 +6,34 @@
 //
 
 import Foundation
+import AVKit
+
+public enum MediaType: String, Codable, Sendable {
+    case image
+    case video
+}
+
+public struct Media: Identifiable, Codable, Equatable, Sendable {
+    public let id: String
+    public let url: String
+    public let type: MediaType
+    
+    public init(id: String = UUID().uuidString, url: String, type: MediaType) {
+        self.id = id
+        self.url = url
+        self.type = type
+    }
+}
 
 /// 代表一个可滑动卡片的用户模型
-public struct User: Identifiable, Codable, Equatable {
+public struct User: Identifiable, Codable, Equatable, Sendable {
     public let id: String
     public let name: String
     public let age: Int
     public let zodiac: String
     public let location: String
     public let height: Int
-    public let photos: [String]
+    public let medias: [Media]
 
     /// 完整初始化方法
     /// - Parameters:
@@ -33,7 +51,7 @@ public struct User: Identifiable, Codable, Equatable {
         zodiac: String,
         location: String,
         height: Int,
-        photos: [String]
+        medias: [Media]
     ) {
         self.id = id
         self.name = name
@@ -41,7 +59,7 @@ public struct User: Identifiable, Codable, Equatable {
         self.zodiac = zodiac
         self.location = location
         self.height = height
-        self.photos = photos
+        self.medias = medias
     }
     
     /// 便利初始化方法（自动生成 ID）
@@ -58,7 +76,7 @@ public struct User: Identifiable, Codable, Equatable {
         zodiac: String,
         location: String,
         height: Int,
-        photos: [String]
+        medias: [Media]
     ) {
         self.init(
             id: UUID().uuidString,
@@ -67,7 +85,7 @@ public struct User: Identifiable, Codable, Equatable {
             zodiac: zodiac,
             location: location,
             height: height,
-            photos: photos
+            medias: medias
         )
     }
 }
@@ -87,7 +105,7 @@ public class UserBuilder {
     private var zodiac: String = ""
     private var location: String = ""
     private var height: Int = 170
-    private var photos: [String] = []
+    private var medias: [Media] = []
     
     public init() {}
     
@@ -121,8 +139,8 @@ public class UserBuilder {
         return self
     }
     
-    public func photos(_ photos: [String]) -> UserBuilder {
-        self.photos = photos
+    public func medias(_ medias: [Media]) -> UserBuilder {
+        self.medias = medias
         return self
     }
     
@@ -134,7 +152,7 @@ public class UserBuilder {
             zodiac: zodiac,
             location: location,
             height: height,
-            photos: photos
+            medias: medias
         )
     }
 }

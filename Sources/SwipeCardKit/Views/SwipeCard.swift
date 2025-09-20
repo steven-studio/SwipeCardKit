@@ -6,76 +6,60 @@
 //
 
 import SwiftUI
+import AVKit
+import AVFoundation
 
 @available(iOS 13.0, *)
 public struct SwipeCard: View {
     public var user: User
-    @State private var currentPhotoIndex = 0
-
-    public init(user: User) {
-        self.user = user
-    }
+    public var dragOffset: CGSize // 添加這個參數
+    @State private var currentIndex = 0
     
+    // ✅ 保留 AVPlayer，避免被釋放
+    @State private var player: AVPlayer? = nil
+    
+    // 添加 viewModel 參數和回調函數
+    public var onLike: (() -> Void)?
+    public var onDislike: (() -> Void)?
+    public var onUndo: (() -> Void)?
+
+    // 修正初始化器 - 接受所有必要的參數
+    public init(
+        user: User,
+        dragOffset: CGSize = .zero,
+        onLike: (() -> Void)? = nil,
+        onDislike: (() -> Void)? = nil,
+        onUndo: (() -> Void)? = nil
+    ) {
+        self.user = user
+        self.dragOffset = dragOffset
+        self.onLike = onLike
+        self.onDislike = onDislike
+        self.onUndo = onUndo
+    }
+
     public var body: some View {
         ZStack {
-            if user.photos.indices.contains(currentPhotoIndex) {
-                if #available(iOS 17.0, *) {
-                    photoImageView
-                        .frame(maxWidth: UIScreen.main.bounds.width - 20, maxHeight: .infinity)
+            if user.medias.indices.contains(currentIndex) {
+                if #available(iOS 14.0, *) {
+                    mediaView
+                        .frame(maxWidth: UIScreen.main.bounds.width, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 25))
                         .overlay(RoundedRectangle(cornerRadius: 25).stroke(Color.white, lineWidth: 4))
                         .edgesIgnoringSafeArea(.top)
-                        .onTapGesture { value in
-                            let screenWidth = UIScreen.main.bounds.width
-                            let tapX = value.x
-                            if tapX < screenWidth / 2 {
-                                if currentPhotoIndex > 0 {
-                                    currentPhotoIndex -= 1
-                                }
-                            } else {
-                                if currentPhotoIndex < user.photos.count - 1 {
-                                    currentPhotoIndex += 1
-                                }
-                            }
-                        }
-                } else if #available(iOS 17.0, *) {
-                    Image(user.photos[currentPhotoIndex])
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: UIScreen.main.bounds.width - 20, maxHeight: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 25))
-                        .overlay(RoundedRectangle(cornerRadius: 25).stroke(Color.white, lineWidth: 4))
-                        .edgesIgnoringSafeArea(.top)
-                        .onTapGesture { value in
-                            let screenWidth = UIScreen.main.bounds.width
-                            let tapX = value.x
-                            if tapX < screenWidth / 2 {
-                                if currentPhotoIndex > 0 {
-                                    currentPhotoIndex -= 1
-                                }
-                            } else {
-                                if currentPhotoIndex < user.photos.count - 1 {
-                                    currentPhotoIndex += 1
-                                }
-                            }
-                        }
+                        .contentShape(Rectangle())   // 讓整塊都可點
+                        .gesture(tapToNavigate)     // ← 改這裡：用可取座標的手勢
+                        .onChange(of: currentIndex) { _ in preparePlayerForCurrentMedia() }
+                        .onAppear { preparePlayerForCurrentMedia() }
                 } else {
-                    // 舊版本不支援 tap 座標，因此簡單切換至下一張圖片
-                    Image(user.photos[currentPhotoIndex])
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: UIScreen.main.bounds.width - 20, maxHeight: .infinity)
+                    // Fallback on earlier versions
+                    mediaView
+                        .frame(maxWidth: UIScreen.main.bounds.width, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 25))
                         .overlay(RoundedRectangle(cornerRadius: 25).stroke(Color.white, lineWidth: 4))
                         .edgesIgnoringSafeArea(.top)
-                        .onTapGesture {
-                            if currentPhotoIndex < user.photos.count - 1 {
-                                currentPhotoIndex += 1
-                            } else {
-                                // 可根據需求回到第一張或不做事
-                                currentPhotoIndex = 0
-                            }
-                        }
+                        .contentShape(Rectangle())   // 讓整塊都可點
+                        .gesture(tapToNavigate)     // ← 改這裡：用可取座標的手勢
                 }
             } else {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -87,10 +71,10 @@ public struct SwipeCard: View {
             
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 5) {
-                    ForEach(0..<user.photos.count, id: \.self) { index in
+                    ForEach(0..<user.medias.count, id: \.self) { index in
                         RoundedRectangle(cornerRadius: 4)
                             .frame(width: 40, height: 8)
-                            .foregroundColor(index == currentPhotoIndex ? .white : .gray)
+                            .foregroundColor(index == currentIndex ? .white : .gray)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -161,7 +145,8 @@ public struct SwipeCard: View {
                         Spacer()
                         
                         Button(action: {
-                            // Dislike action
+                            // Dislike action - 使用回調函數
+                            onDislike?()
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 30)
@@ -194,7 +179,8 @@ public struct SwipeCard: View {
                         Spacer()
                         
                         Button(action: {
-                            // Like action
+                            // Like action - 使用回調函數
+                            onLike?()
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 30)
@@ -227,30 +213,154 @@ public struct SwipeCard: View {
                 }
             }
             .padding()
+            
+            // 添加滑動提示覆蓋層
+            swipeIndicatorOverlay
         }
     }
     
     // MARK: - 圖片視圖
     @ViewBuilder
-    private var photoImageView: some View {
-        let photoURL = user.photos[currentPhotoIndex]
-        
-        if #available(iOS 15.0, *) {
-            // iOS 15+ 使用系統的 AsyncImage
-            AsyncImage(url: URL(string: photoURL)) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                ZStack {
-                    Color.gray.opacity(0.3)
+    private var mediaView: some View {
+        let media = user.medias[currentIndex]
+        switch media.type {
+        case .image:
+            if #available(iOS 15.0, *) {
+                AsyncImage(url: URL(string: media.url)) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                }
+            } else {
+                LegacyAsyncImageView(url: media.url)
+            }
+
+        case .video:
+            if #available(iOS 14.0, *) {
+                if let player {
+                    VideoPlayer(player: player)
+                        .background(Color.black)                 // 看起來更穩
+                        .aspectRatio(contentMode: .fill)
+                        .onAppear { player.play() }              // ✅ 顯示時播放
+                        .onDisappear { player.pause() }          // ✅ 離開時暫停
+                } else {
+                    // 還沒準備好 player 時顯示載入中
+                    if #available(iOS 15.0, *) {
+                        ZStack { Color.black; ProgressView().tint(.white) }
+                    }
+                }
+            } else {
+                // iOS 13 fallback：不支援 VideoPlayer，可顯示縮圖或提示
+                ZStack { Color.black; Text("影片需 iOS 14+").foregroundColor(.white) }
+            }
+        }
+    }
+    
+    // MARK: - 準備/更新 Player
+    private func preparePlayerForCurrentMedia() {
+        let media = user.medias[currentIndex]
+        if media.type == .video, let url = URL(string: media.url) {
+            // ⚠️ 若是 http 請確認 Info.plist 已允許 ATS，否則會黑屏
+            // NSAppTransportSecurity -> NSAllowsArbitraryLoads = YES (或改用 https)
+            player = AVPlayer(url: url)
+        } else {
+            // 切回圖片時釋放 player
+            player?.pause()
+            player = nil
+        }
+    }
+    
+    // MARK: - Tap -> 左右切換
+    private var tapToNavigate: some Gesture {
+        if #available(iOS 16.0, *) {
+            return SpatialTapGesture()
+                .onEnded { value in
+                    let x = value.location.x
+                    let mid = UIScreen.main.bounds.width / 2
+                    if x < mid { prev() } else { next() }
+                }
+        } else {
+            // iOS 13–15：用零距離 Drag 當 tap 並讀 location
+            return DragGesture(minimumDistance: 0)
+                .onEnded { value in
+                    let x = value.location.x
+                    let mid = UIScreen.main.bounds.width / 2
+                    if x < mid { prev() } else { next() }
+                }
+        }
+    }
+
+    // MARK: - 索引邏輯（包成函式，避免越界/彈跳）
+    private func next() {
+        guard !user.medias.isEmpty else { return }
+        // 你要「環狀」還是「卡住」自己選一種：
+        // 環狀：
+        currentIndex = (currentIndex + 1) % user.medias.count
+        // 若想改為「卡住到最後一張」：
+        // currentIndex = min(currentIndex + 1, user.medias.count - 1)
+    }
+
+    private func prev() {
+        guard !user.medias.isEmpty else { return }
+        // 環狀：
+        currentIndex = (currentIndex - 1 + user.medias.count) % user.medias.count
+        // 若想改為「卡住到第一張」：
+        // currentIndex = max(currentIndex - 1, 0)
+    }
+    
+    @ViewBuilder
+    private var swipeIndicatorOverlay: some View {
+        if abs(dragOffset.width) > 20 { // 只有在滑動距離足夠時才顯示
+            ZStack {
+                if dragOffset.width > 0 {
+                    // 右滑 - 喜歡
+                    HStack {
+                        Spacer()
+                        VStack {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 60, weight: .bold))
+                                .foregroundColor(.green)
+                            if #available(iOS 14.0, *) {
+                                Text("LIKE")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.green)
+                            } else {
+                                // Fallback on earlier versions
+                            }
+                        }
+                        .rotationEffect(.degrees(-20))
+                        .opacity(min(Double(dragOffset.width / 150), 1.0))
+                        .scaleEffect(min(dragOffset.width / 100, 1.5))
+                        Spacer()
+                    }
+                } else {
+                    // 左滑 - 不喜歡
+                    HStack {
+                        Spacer()
+                        VStack {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 60, weight: .bold))
+                                .foregroundColor(.red)
+                            if #available(iOS 14.0, *) {
+                                Text("NOPE")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+                            } else {
+                                // Fallback on earlier versions
+                            }
+                        }
+                        .rotationEffect(.degrees(20))
+                        .opacity(min(Double(abs(dragOffset.width) / 150), 1.0))
+                        .scaleEffect(min(abs(dragOffset.width) / 100, 1.5))
+                        Spacer()
+                    }
                 }
             }
-        } else {
-            // iOS 13-14 降級處理
-            LegacyAsyncImageView(url: photoURL)
+            .allowsHitTesting(false) // 不干擾手勢
         }
     }
 }

@@ -40,9 +40,9 @@ public struct SwipeCardDemo {
                 zodiac: "天秤座",
                 location: "台北市",
                 height: 175,
-                photos: [
-                    "https://images.examples.com/wp-content/uploads/2017/11/person13.jpg",
-                    "https://images.examples.com/wp-content/uploads/2017/11/person14.jpg"
+                medias: [
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person13.jpg", type: .image),
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person14.jpg", type: .image)
                 ]
             ),
             User(
@@ -52,9 +52,9 @@ public struct SwipeCardDemo {
                 zodiac: "狮子座",
                 location: "新竹市",
                 height: 180,
-                photos: [
-                    "https://images.examples.com/wp-content/uploads/2017/11/person15.jpg",
-                    "https://images.examples.com/wp-content/uploads/2017/11/person16.jpg"
+                medias: [
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person15.jpg", type: .image),
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person16.jpg", type: .image)
                 ]
             ),
             User(
@@ -64,9 +64,9 @@ public struct SwipeCardDemo {
                 zodiac: "双鱼座",
                 location: "台中市",
                 height: 165,
-                photos: [
-                    "https://images.examples.com/wp-content/uploads/2017/11/person17.jpg",
-                    "https://images.examples.com/wp-content/uploads/2017/11/person18.jpg"
+                medias: [
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person17.jpg", type: .image),
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person18.jpg", type: .image)
                 ]
             ),
             User(
@@ -76,8 +76,8 @@ public struct SwipeCardDemo {
                 zodiac: "水瓶座",
                 location: "高雄市",
                 height: 178,
-                photos: [
-                    "https://images.examples.com/wp-content/uploads/2017/11/person19.jpg"
+                medias: [
+                    Media(url: "https://images.examples.com/wp-content/uploads/2017/11/person19.jpg", type: .image)
                 ]
             )
         ]
